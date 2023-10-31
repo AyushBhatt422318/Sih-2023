@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Skin Disease Detection</title>
+    <style>
+        body {
+            background-color: #fff8e1; /* Cream white background color */
+            font-family: 'Roboto', sans-serif; /* Use Google Fonts for a better font */
+        }
+
+        .container {
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.8); /* Add a semi-transparent white background */
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px auto;
+            max-width: 500px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .upload-form {
+            margin: 20px 0;
+        }
+
+        .file-upload {
+            display: none; /* Hide the default file input */
+        }
+
+        .upload-button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .upload-button:hover {
+            background-color: #45a049;
+        }
+
+        .file-label {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        #diseaselabel {
+            font-size: 18px;
+            color: #4CAF50;
+            margin-top: 10px;
+        }
+
+        #confidence {
+            font-size: 16px;
+            color: #333;
+        }
+        
+        #description {
+            font-size: 16px;
+            color: #333;
+        }
+ 
+        #localnames {
+            font-size: 16px;
+            color: #333;
+        }
+
+       #search-dermatologist {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        #search-dermatologist:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Skin Disease Detection</h1>
+        <p>Upload an image for disease detection:</p>
+        
+        <form class="upload-form" action="/detect_disease" method="POST" enctype="multipart/form-data">
+            <input class="file-upload" type="file" name="image" accept="image/*" required id="file-upload">
+            <label class="file-label" for="file-upload">Choose File</label>
+            <br><br>
+            <!-- Skin Type Dropdown -->
+            <label for="skin-type">Select Skin Type:</label>
+            <select id="skin-type" name="skin-type">
+                <option value="oily">Oily</option>
+                <option value="dry">Dry</option>
+            </select>
+            <br><br>
+            <!-- Body Region Dropdown -->
+            <label for="body-region">Select Body Region:</label>
+            <select id="body-region" name="body-region">
+                <option value="face">Face</option>
+                <option value="hand">Hand</option>
+                <option value="leg">Leg</option>
+                <option value="torso">Torso</option>
+            </select>
+            <br><br>
+            <!-- Image Preview -->
+            <img id="image-preview" src="" alt="Uploaded Image Preview" style="max-width: 100%; display: none;">
+            
+            <input class="upload-button" type="submit" value="Detect Disease">
+        </form>
+        
+        <br>
+        <h2>Results:</h2>
+        <p id="diseaselabel">Disease Label:</p>
+        <p id="confidence">Confidence Score:</p>
+        <p id="description">Description:</p>
+        <p id="localnames">Local Names:</p>
+        <button id="search-dermatologist">Search Nearby Dermatologist</button>
+    </div>
+
+    <script>
+        // JavaScript code to trigger file input when the label is clicked
+        const fileInput = document.querySelector('.file-upload');
+        const fileLabel = document.querySelector('.file-label');
+        const imagePreview = document.getElementById('image-preview');
+
+        fileLabel.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', () => {
+            const selectedFile = fileInput.files[0];
+            if (selectedFile) {
+                const objectURL = URL.createObjectURL(selectedFile);
+                imagePreview.src = objectURL;
+                imagePreview.style.display = 'block';
+            } else {
+                imagePreview.src = '';
+                imagePreview.style.display = 'none';
+            }
+        });
+
+        // JavaScript code to display detection results
+        document.querySelector('.upload-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const fileInput = document.querySelector('input[type="file"]');
+            if (fileInput.files.length > 0) {
+                const formData = new FormData();
+                formData.append('image', fileInput.files[0]);
+
+                const response = await fetch('http://localhost:5000/detect_disease', {
+                    method: 'POST',
+                    body: formData,
+                    mode: 'cors',
+                });
+
+                const data = await response.json();
+                console.log(data);
+
+                if (data.diseaselabel && data.confidence !== undefined) {
+                    // Display disease label and confidence score
+                    document.getElementById('diseaselabel').textContent = `Disease Label: ${data.diseaselabel}`;
+                    document.getElementById('confidence').textContent = `Confidence Score: ${data.confidence}`;
+                    document.getElementById('description').textContent = `Description: ${data.description}`;
+                    document.getElementById('localnames').textContent = `Local Names: ${data.localnames}`;
+                } 
+                else {
+
+                    // Handle the case where the response does not contain the expected data
+                    console.error('Response data is missing expected properties');
+                }
+            } else {
+                // Handle the case where no file is selected
+                console.error('No file selected for upload');
+            }
+        });
+
+        document.getElementById('search-dermatologist').addEventListener('click', () => {
+            if ("geolocation" in navigator) {
+                // Get user's current location
+                navigator.geolocation.getCurrentPosition(function (position) {
+                    const latitude = position.coords.latitude;
+                    const longitude = position.coords.longitude;
+
+                    // Construct the Google Maps URL for searching nearby dermatologists
+                    const mapsUrl = `https://www.google.com/maps/search/dermatologist near me/@${latitude},${longitude},15z`;
+
+                    // Open Google Maps in a new tab
+                    window.open(mapsUrl, '_blank');
+                });
+            } else {
+                alert("Geolocation is not available in your browser.");
+            }
+        });
+    </script>
+</body>
+</html>
